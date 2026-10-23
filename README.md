@@ -4,6 +4,8 @@
 
 > Версия 0.1.0 — ранняя, но рабочая. Интерфейс и документация на русском, English UI тоже доступен.
 
+**Скачать готовую сборку:** [GitHub Releases](https://github.com/Memovoff/YMRPC-Next/releases/latest) — portable `YMRPC-Next.exe` и ZIP-архив.
+
 ---
 
 ## Возможности

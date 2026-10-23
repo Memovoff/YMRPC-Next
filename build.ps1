@@ -64,8 +64,12 @@ Write-Host "==> упаковка $Zip" -ForegroundColor Cyan
 Compress-Archive -Path $Exe -DestinationPath $Zip -Force
 
 $Hash = (Get-FileHash $Exe -Algorithm SHA256).Hash
+$ZipHash = (Get-FileHash $Zip -Algorithm SHA256).Hash
 $SizeMb = [math]::Round((Get-Item $Exe).Length / 1MB, 1)
-"$Hash  YMRPC-Next.exe" | Set-Content (Join-Path $Root "dist\SHA256SUMS.txt") -Encoding ASCII
+@(
+    "$Hash  YMRPC-Next.exe"
+    "$ZipHash  $(Split-Path -Leaf $Zip)"
+) | Set-Content (Join-Path $Root "dist\SHA256SUMS.txt") -Encoding ASCII
 
 Write-Host ""
 Write-Host "Готово: $Exe ($SizeMb МБ)" -ForegroundColor Green
