@@ -377,6 +377,14 @@ $env:YMRPC_NO_WEBENGINE = "1"
 
 ---
 
+## Благодарности
+
+Идея и вдохновение — [FozerG/WinYandexMusicRPC](https://github.com/FozerG/WinYandexMusicRPC) (MIT): программа показывает текущий трек из Яндекс Музыки и других плееров в Discord Rich Presence.
+
+YMRPC Next — самостоятельная реализация на Python + PySide6. Код написан с нуля, но концепция, набор функций и картинки статусов `Playing`/`Paused` взяты из оригинального проекта. Спасибо автору.
+
+---
+
 ## Лицензия
 
 MIT. См. [LICENSE](LICENSE).
