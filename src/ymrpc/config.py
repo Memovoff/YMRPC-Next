@@ -25,6 +25,7 @@ logger = logging.getLogger(__name__)
 SCHEMA_VERSION = 2
 REPO_RE = re.compile(r"^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$")
 ACCENT_RE = re.compile(r"^#[0-9a-fA-F]{6}$")
+LEGACY_UPDATE_REPOS = {"FozerG/YMRPC-Next"}
 
 
 def config_path() -> Path:
@@ -89,7 +90,8 @@ class ConfigStore:
             except (TypeError, ValueError):
                 schema = 1
             settings = _sanitize(_load(section, schema))
-            if schema < SCHEMA_VERSION:
+            legacy_repo = str(section.get("update_repo", "")).strip() in LEGACY_UPDATE_REPOS
+            if schema < SCHEMA_VERSION or legacy_repo:
                 try:
                     self.save(settings, force=True)
                 except OSError as error:
@@ -175,7 +177,7 @@ def _load(raw: dict, schema: int = SCHEMA_VERSION) -> Settings:
         accent = defaults.overlay_accent
 
     repo = str(raw.get("update_repo", defaults.update_repo)).strip()
-    if not REPO_RE.match(repo):
+    if not REPO_RE.match(repo) or repo in LEGACY_UPDATE_REPOS:
         repo = defaults.update_repo
 
     hidden = str(raw.get("overlay_hide", defaults.overlay_hide))[:80]

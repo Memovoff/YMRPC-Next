@@ -98,6 +98,31 @@ def test_explicit_ynison_mode_is_kept_after_save(tmp_path) -> None:
     assert ConfigStore(path).settings.capture_mode == CaptureMode.YNISON
 
 
+def test_legacy_update_repo_migrates_to_new_default(tmp_path) -> None:
+    path = tmp_path / "config.json"
+    path.write_text(
+        json.dumps(
+            {
+                "schema": 2,
+                "settings": {"update_repo": "FozerG/YMRPC-Next"},
+            }
+        ),
+        encoding="utf-8",
+    )
+    assert ConfigStore(path).settings.update_repo == Settings().update_repo
+    migrated = json.loads(path.read_text(encoding="utf-8"))
+    assert migrated["settings"]["update_repo"] == Settings().update_repo
+
+
+def test_custom_update_repo_is_kept(tmp_path) -> None:
+    path = tmp_path / "config.json"
+    path.write_text(
+        json.dumps({"schema": 2, "settings": {"update_repo": "owner/custom-repo"}}),
+        encoding="utf-8",
+    )
+    assert ConfigStore(path).settings.update_repo == "owner/custom-repo"
+
+
 def test_identical_settings_do_not_rewrite_file(tmp_path, monkeypatch) -> None:
     path = tmp_path / "config.json"
     store = ConfigStore(path)
