@@ -24,6 +24,7 @@ from ..widgets import (
     IconButton,
     Page,
     Pill,
+    ResponsiveGrid,
     SeekBar,
     SoftCard,
     format_time,
@@ -143,8 +144,11 @@ class OverviewPage(Page):
         header.addStretch(1)
         card.add_layout(header)
 
-        row = QHBoxLayout()
-        row.setSpacing(10)
+        row = ResponsiveGrid(
+            card,
+            breakpoints=((820, 4), (520, 2), (0, 1)),
+            spacing=10,
+        )
         self.mini_button = self._tile(t("overview.mini_player"), "headphones", card, checkable=True)
         self.presence_button = self._tile(t("overview.hide_presence"), "eye", card, checkable=True)
         self.lyrics_tile = self._tile(t("overview.lyrics"), "lyrics", card)
@@ -156,8 +160,8 @@ class OverviewPage(Page):
         self.overlay_tile.clicked.connect(self._open_overlay)
 
         for button in (self.mini_button, self.presence_button, self.lyrics_tile, self.overlay_tile):
-            row.addWidget(button, 1)
-        card.add_layout(row)
+            row.add(button)
+        card.add(row)
         self.add(card)
 
     def _tile(self, text: str, icon_name: str, parent: QWidget, *, checkable: bool = False) -> QPushButton:
@@ -196,14 +200,17 @@ class OverviewPage(Page):
         self.add(self.account_card)
 
     def _build_status(self) -> None:
-        row = QHBoxLayout()
-        row.setSpacing(10)
+        row = ResponsiveGrid(
+            self,
+            breakpoints=((760, 3), (500, 2), (0, 1)),
+            spacing=10,
+        )
         self.status_source = self._status_tile("sources", t("overview.source"))
         self.status_discord = self._status_tile("discord", "Discord")
         self.status_overlay = self._status_tile("overlay", t("overview.overlay"))
         for tile in (self.status_source, self.status_discord, self.status_overlay):
-            row.addWidget(tile, 1)
-        self.add_layout(row)
+            row.add(tile)
+        self.add(row)
 
     def _status_tile(self, icon_name: str, title: str) -> QFrame:
         frame = SoftCard(self, padding=13)
@@ -215,7 +222,7 @@ class OverviewPage(Page):
         text.setSpacing(0)
         label = QLabel(title, frame)
         label.setObjectName("tiny")
-        value = QLabel("—", frame)
+        value = ElidedLabel("—", frame)
         value.setObjectName("h3")
         value.setProperty("role", "value")
         text.addWidget(label)
@@ -280,7 +287,7 @@ class OverviewPage(Page):
     def set_overlay(self, running: bool, url: str) -> None:
         self._overlay_running = running
         self._overlay_url = url
-        self.status_overlay.value.setText(url if running else t("overlay.stopped"))
+        self.status_overlay.value.set_full_text(url if running else t("overlay.stopped"))
         self.status_overlay.value.setToolTip(url)
 
     def _open_overlay(self) -> None:
@@ -298,7 +305,7 @@ class OverviewPage(Page):
             self.album.set_full_text(album)
             self.source_pill.setText(view.source_name or t("source.unknown"))
             self.source_pill.setVisible(True)
-            self.status_source.value.setText(view.source_name or "—")
+            self.status_source.value.set_full_text(view.source_name or "—")
             self.lyrics_button.setEnabled(view.lyrics_available)
             self.lyrics_tile.setEnabled(view.lyrics_available)
         else:
@@ -306,7 +313,7 @@ class OverviewPage(Page):
             self.artist.set_full_text(t("overview.nothing_hint"))
             self.album.set_full_text("")
             self.source_pill.setVisible(False)
-            self.status_source.value.setText("—")
+            self.status_source.value.set_full_text("—")
             self.lyrics_button.setEnabled(False)
             self.lyrics_tile.setEnabled(False)
         self.presence_pill.setVisible(bool(track) and self._settings is not None)

@@ -26,6 +26,7 @@ from ..widgets import (
     IconButton,
     OptionCard,
     Page,
+    ResponsiveGrid,
     SoftCard,
 )
 
@@ -52,8 +53,11 @@ class SourcesPage(Page):
         title.setObjectName("h2")
         card.add(title)
 
-        row = QHBoxLayout()
-        row.setSpacing(10)
+        row = ResponsiveGrid(
+            card,
+            breakpoints=((780, 3), (500, 2), (0, 1)),
+            spacing=10,
+        )
         group = QButtonGroup(self)
         group.setExclusive(True)
         for index, (mode, name, hint) in enumerate(
@@ -66,9 +70,9 @@ class SourcesPage(Page):
             option = OptionCard(name, hint, card)
             group.addButton(option, index)
             self._mode_cards[mode] = option
-            row.addWidget(option, 1)
+            row.add(option)
         group.idToggled.connect(lambda _index, checked: checked and self.notify())
-        card.add_layout(row)
+        card.add(row)
         self.add(card)
 
     def _build_session(self) -> None:

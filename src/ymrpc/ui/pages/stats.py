@@ -28,7 +28,7 @@ from ...i18n import t
 from ...models import Period, PlaybackView
 from ...services import stats as stats_service
 from .. import icons, theme
-from ..widgets import Card, ElidedLabel, Page, StatTile, format_listened
+from ..widgets import Card, ElidedLabel, Page, ResponsiveGrid, StatTile, format_listened
 
 
 class ActivityChart(QWidget):
@@ -180,6 +180,7 @@ class StatsPage(Page):
 
         self.empty_label = QLabel(t("stats.empty"), self)
         self.empty_label.setObjectName("muted")
+        self.empty_label.setWordWrap(True)
         self.empty_label.setVisible(False)
         self.add(self.empty_label)
 
@@ -190,15 +191,18 @@ class StatsPage(Page):
         self.refresh()
 
     def _build_tiles(self) -> None:
-        row = QHBoxLayout()
-        row.setSpacing(10)
+        row = ResponsiveGrid(
+            self,
+            breakpoints=((840, 4), (520, 2), (0, 1)),
+            spacing=10,
+        )
         self.tile_time = StatTile(t("stats.time"), "clock", self)
         self.tile_plays = StatTile(t("stats.plays"), "play", self)
         self.tile_tracks = StatTile(t("stats.tracks"), "music", self)
         self.tile_artists = StatTile(t("stats.artists"), "headphones", self)
         for tile in (self.tile_time, self.tile_plays, self.tile_tracks, self.tile_artists):
-            row.addWidget(tile, 1)
-        self.add_layout(row)
+            row.add(tile)
+        self.add(row)
 
     def _build_chart(self) -> None:
         card = Card(padding=18)
@@ -206,10 +210,10 @@ class StatsPage(Page):
         title = QLabel(t("stats.chart_title"), card)
         title.setObjectName("h2")
         header.addWidget(title)
-        header.addStretch(1)
-        self.minimum_hint = QLabel(t("stats.minimum_hint"), card)
+        self.minimum_hint = ElidedLabel(t("stats.minimum_hint"), card)
         self.minimum_hint.setObjectName("tiny")
-        header.addWidget(self.minimum_hint)
+        self.minimum_hint.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+        header.addWidget(self.minimum_hint, 1)
         card.add_layout(header)
         self.chart = ActivityChart(card)
         card.add(self.chart)
@@ -226,7 +230,7 @@ class StatsPage(Page):
 
     def _list_card(self, title: str) -> tuple[Card, QVBoxLayout]:
         card = Card(padding=16)
-        label = QLabel(title, card)
+        label = ElidedLabel(title, card)
         label.setObjectName("h2")
         card.add(label)
         box = QVBoxLayout()
@@ -236,7 +240,7 @@ class StatsPage(Page):
 
     def _build_recent(self) -> None:
         card = Card(padding=16)
-        title = QLabel(t("stats.recent"), card)
+        title = ElidedLabel(t("stats.recent"), card)
         title.setObjectName("h2")
         card.add(title)
         self.table = QTableWidget(card)
@@ -257,7 +261,9 @@ class StatsPage(Page):
         self.table.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         self.table.setWordWrap(False)
         self.table.setMinimumHeight(220)
+        self.table.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
         header = self.table.horizontalHeader()
+        header.setMinimumSectionSize(64)
         header.setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
         header.setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)
         header.setSectionResizeMode(2, QHeaderView.ResizeMode.Stretch)
@@ -302,6 +308,7 @@ class StatsPage(Page):
             item = layout.takeAt(0)
             widget = item.widget()
             if widget is not None:
+                widget.setParent(None)
                 widget.deleteLater()
 
     def _fill_tracks(self, rows: list[dict]) -> None:
@@ -343,10 +350,11 @@ class StatsPage(Page):
         title = ElidedLabel(row.get("title") or row.get("artist") or "—", widget)
         title.setStyleSheet("font-weight: 600;")
         text.addWidget(title)
-        subtitle = ElidedLabel(artist, widget)
-        subtitle.setObjectName("tiny")
         if artist:
+            subtitle = ElidedLabel(artist, widget)
+            subtitle.setObjectName("tiny")
             text.addWidget(subtitle)
+        text.addStretch(1)
         layout.addLayout(text, 1)
         right = QVBoxLayout()
         right.setSpacing(0)
@@ -358,6 +366,7 @@ class StatsPage(Page):
         duration.setObjectName("tiny")
         duration.setAlignment(Qt.AlignmentFlag.AlignRight)
         right.addWidget(duration)
+        right.addStretch(1)
         layout.addLayout(right)
         return widget
 

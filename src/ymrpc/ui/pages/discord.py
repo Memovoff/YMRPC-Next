@@ -30,7 +30,7 @@ class DiscordPreview(QFrame):
     def __init__(self, parent: QWidget | None = None):
         super().__init__(parent)
         self.setObjectName("soft")
-        self.setMinimumWidth(300)
+        self.setMinimumWidth(240)
         layout = QVBoxLayout(self)
         layout.setContentsMargins(16, 14, 16, 14)
         layout.setSpacing(10)
@@ -42,13 +42,11 @@ class DiscordPreview(QFrame):
             f"color: {theme.MUTED_DIM}; font-size: 9px; font-weight: 700; letter-spacing: 1px;"
         )
         caption.addWidget(self.caption)
-        self.app = QLabel("Яндекс Музыка", self)
+        self.app = ElidedLabel("Яндекс Музыка", self)
         self.app.setStyleSheet(f"color: {theme.TEXT}; font-size: 10px; font-weight: 600;")
-        caption.addWidget(self.app)
-        caption.addStretch(1)
-        self.small_status = QLabel("", self)
+        caption.addWidget(self.app, 1)
+        self.small_status = ElidedLabel("", self)
         self.small_status.setObjectName("tiny")
-        self.small_status.setTextFormat(Qt.TextFormat.PlainText)
         caption.addWidget(self.small_status)
         layout.addLayout(caption)
 
@@ -77,8 +75,8 @@ class DiscordPreview(QFrame):
         self.buttons = QHBoxLayout()
         self.buttons.setSpacing(6)
         layout.addLayout(self.buttons)
-        self.button_one = QLabel("", self)
-        self.button_two = QLabel("", self)
+        self.button_one = ElidedLabel("", self)
+        self.button_two = ElidedLabel("", self)
         for button in (self.button_one, self.button_two):
             button.setAlignment(Qt.AlignmentFlag.AlignCenter)
             button.setStyleSheet(
@@ -92,12 +90,12 @@ class DiscordPreview(QFrame):
         self.details.set_full_text(data.details or "—")
         self.state.set_full_text(data.state or "")
         self.large_text.set_full_text(data.large_text or "")
-        self.small_status.setText(data.small_text)
+        self.small_status.set_full_text(data.small_text)
         self.elapsed.setText("1:12 / 3:34")
 
     def set_buttons(self, labels: list[str]) -> None:
         for button, label in zip((self.button_one, self.button_two), labels, strict=False):
-            button.setText(label)
+            button.set_full_text(label)
             button.setVisible(bool(label))
 
 

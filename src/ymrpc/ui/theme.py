@@ -27,6 +27,15 @@ RED = "#ff6b6b"
 BLUE = "#69a8ff"
 ORANGE = "#ffa94d"
 
+# Layout tokens. Keep spacing and widths in one place so pages stay aligned.
+PAGE_MAX_WIDTH = 1040
+PAGE_GAP = 16
+PAGE_MARGIN_X = 32
+PAGE_MARGIN_TOP = 24
+PAGE_MARGIN_BOTTOM = 32
+FOOTER_HEIGHT = 48
+SIDEBAR_WIDTH = 228
+
 
 def palette() -> QPalette:
     result = QPalette()
@@ -69,12 +78,12 @@ def stylesheet() -> str:
     QWidget#transparent {{ background: transparent; }}
     QWidget#sidebar {{ background: {SIDEBAR}; border-right: 1px solid {BORDER_SOFT}; }}
     QLabel {{ background: transparent; }}
-    QLabel#h1 {{ font-family: "Segoe UI Variable Display", "Segoe UI", sans-serif; font-size: 27px; font-weight: 700; color: {TEXT}; }}
+    QLabel#h1 {{ font-family: "Segoe UI Variable Display", "Segoe UI", sans-serif; font-size: 28px; font-weight: 700; color: {TEXT}; }}
     QLabel#h2 {{ font-size: 18px; font-weight: 600; color: {TEXT}; }}
     QLabel#h3 {{ font-size: 14px; font-weight: 600; color: {TEXT}; }}
     QLabel#muted {{ color: {MUTED}; }}
     QLabel#tiny {{ color: {MUTED_DIM}; font-size: 11px; }}
-    QLabel#value {{ font-size: 24px; font-weight: 700; color: {TEXT}; }}
+    QLabel#value {{ font-size: 25px; font-weight: 700; color: {TEXT}; }}
     QLabel#accent {{ color: {ACCENT}; }}
     QLabel#danger {{ color: {RED}; }}
     QLabel#success {{ color: {GREEN}; }}
@@ -88,8 +97,8 @@ def stylesheet() -> str:
     }}
     QFrame#accentCard {{
         background: qlineargradient(x1:0, y1:0, x2:1, y2:1,
-            stop:0 #201c0a, stop:0.55 #191a1b, stop:1 {SURFACE});
-        border: 1px solid #3b3414;
+            stop:0 #1d1c18, stop:0.52 #181a20, stop:1 {SURFACE});
+        border: 1px solid #353327;
         border-radius: 18px;
     }}
     QFrame#soft {{
@@ -102,15 +111,20 @@ def stylesheet() -> str:
 
     QToolButton#navButton {{
         border: none;
+        border-left: 3px solid transparent;
         border-radius: 10px;
-        padding: 9px 12px;
+        padding: 9px 12px 9px 9px;
         text-align: left;
         color: {MUTED};
         font-size: 13px;
         font-weight: 600;
     }}
     QToolButton#navButton:hover {{ background: {SURFACE}; color: {TEXT}; }}
-    QToolButton#navButton:checked {{ background: {ACCENT_SOFT}; color: {ACCENT}; }}
+    QToolButton#navButton:checked {{
+        background: {SURFACE};
+        color: {TEXT};
+        border-left: 3px solid {ACCENT};
+    }}
 
     QPushButton {{
         background: {SURFACE_3};
@@ -146,7 +160,7 @@ def stylesheet() -> str:
         color: {TEXT};
     }}
     QPushButton#tile:hover {{ background: {SURFACE_2}; border-color: #353b49; }}
-    QPushButton#tile:checked {{ background: {ACCENT_SOFT}; border-color: rgba(255,204,0,.45); color: {ACCENT}; }}
+    QPushButton#tile:checked {{ background: {ACCENT_SOFT}; border-color: rgba(255,204,0,.38); color: {TEXT}; }}
     QPushButton#iconButton {{
         background: transparent;
         border: none;

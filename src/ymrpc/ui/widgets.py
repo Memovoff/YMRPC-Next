@@ -24,6 +24,7 @@ from PySide6.QtGui import (
 from PySide6.QtWidgets import (
     QAbstractButton,
     QFrame,
+    QGridLayout,
     QHBoxLayout,
     QLabel,
     QPushButton,
@@ -62,6 +63,62 @@ class SoftCard(QFrame):
         self.body.setSpacing(8)
 
 
+class ResponsiveGrid(QWidget):
+    """Сетка карточек, которая перестраивается под ширину контейнера."""
+
+    def __init__(
+        self,
+        parent: QWidget | None = None,
+        *,
+        breakpoints: tuple[tuple[int, int], ...] = ((840, 4), (520, 2), (0, 1)),
+        spacing: int = 10,
+    ):
+        super().__init__(parent)
+        self._breakpoints = tuple(sorted(breakpoints, reverse=True))
+        self._widgets: list[QWidget] = []
+        self._columns = 0
+        self._grid = QGridLayout(self)
+        self._grid.setContentsMargins(0, 0, 0, 0)
+        self._grid.setSpacing(spacing)
+        self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
+
+    def add(self, widget: QWidget) -> QWidget:
+        self._widgets.append(widget)
+        widget.setParent(self)
+        self._reflow(force=True)
+        return widget
+
+    def _columns_for_width(self, width: int) -> int:
+        for minimum, columns in self._breakpoints:
+            if width >= minimum:
+                return columns
+        return 1
+
+    def resizeEvent(self, event) -> None:  # noqa: N802
+        super().resizeEvent(event)
+        self._reflow()
+
+    def _reflow(self, *, force: bool = False) -> None:
+        columns = self._columns_for_width(self.width())
+        if not force and columns == self._columns:
+            return
+        self._columns = columns
+        while self._grid.count():
+            self._grid.takeAt(0)
+        max_columns = max((count for _, count in self._breakpoints), default=1)
+        for column in range(max_columns):
+            self._grid.setColumnStretch(column, 0)
+        for index, widget in enumerate(self._widgets):
+            row, column = divmod(index, columns)
+            span = 1
+            if index == len(self._widgets) - 1 and column == 0 and len(self._widgets) % columns == 1:
+                span = columns
+            self._grid.addWidget(widget, row, column, 1, span)
+        for column in range(min(columns, len(self._widgets))):
+            self._grid.setColumnStretch(column, 1)
+        self.updateGeometry()
+
+
 class Page(QWidget):
     """Страница с заголовком и прокручиваемым содержимым."""
 
@@ -72,10 +129,22 @@ class Page(QWidget):
         self._loading = False
 
         outer = QVBoxLayout(self)
-        outer.setContentsMargins(34, 26, 30, 0)
-        outer.setSpacing(16)
+        outer.setContentsMargins(0, 0, 0, 0)
+        outer.setSpacing(0)
 
-        header = QWidget(self)
+        column = QWidget(self)
+        column.setMaximumWidth(theme.PAGE_MAX_WIDTH)
+        self._column = column
+        column_layout = QVBoxLayout(column)
+        column_layout.setContentsMargins(
+            theme.PAGE_MARGIN_X,
+            theme.PAGE_MARGIN_TOP,
+            theme.PAGE_MARGIN_X,
+            0,
+        )
+        column_layout.setSpacing(theme.PAGE_GAP)
+
+        header = QWidget(column)
         header_layout = QVBoxLayout(header)
         header_layout.setContentsMargins(0, 0, 0, 0)
         header_layout.setSpacing(3)
@@ -86,19 +155,27 @@ class Page(QWidget):
         self.subtitle_label.setObjectName("muted")
         self.subtitle_label.setWordWrap(True)
         header_layout.addWidget(self.subtitle_label)
-        outer.addWidget(header)
+        column_layout.addWidget(header)
 
-        self.scroll = QScrollArea(self)
+        self.scroll = QScrollArea(column)
         self.scroll.setWidgetResizable(True)
         self.scroll.setFrameShape(QFrame.Shape.NoFrame)
         self.scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         container = QWidget(self.scroll)
         container.setObjectName("transparent")
         self.body = QVBoxLayout(container)
-        self.body.setContentsMargins(0, 2, 10, 26)
-        self.body.setSpacing(16)
+        self.body.setContentsMargins(0, 2, 10, theme.PAGE_MARGIN_BOTTOM)
+        self.body.setSpacing(theme.PAGE_GAP)
         self.scroll.setWidget(container)
-        outer.addWidget(self.scroll, 1)
+        column_layout.addWidget(self.scroll, 1)
+
+        outer.addWidget(column, 1, Qt.AlignmentFlag.AlignHCenter)
+
+    def resizeEvent(self, event) -> None:  # noqa: N802
+        super().resizeEvent(event)
+        target = min(event.size().width(), theme.PAGE_MAX_WIDTH)
+        if self._column.width() != target:
+            self._column.setFixedWidth(target)
 
     def add(self, widget: QWidget, stretch: int = 0) -> QWidget:
         self.body.addWidget(widget, stretch)
@@ -142,7 +219,7 @@ class ElidedLabel(QLabel):
         super().__init__(parent)
         self._full = ""
         self.setTextFormat(Qt.TextFormat.PlainText)
-        self.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)
+        self.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Fixed)
         self.set_full_text(text)
 
     def set_full_text(self, text: str) -> None:
@@ -155,6 +232,10 @@ class ElidedLabel(QLabel):
     def resizeEvent(self, event) -> None:  # noqa: N802
         super().resizeEvent(event)
         self._refresh()
+
+    def minimumSizeHint(self) -> QSize:  # noqa: N802
+        hint = super().minimumSizeHint()
+        return QSize(0, hint.height())
 
     def _refresh(self) -> None:
         available = max(0, self.width() - 2)
@@ -559,27 +640,27 @@ class SeekBar(QWidget):
 class StatTile(Card):
     def __init__(self, title: str, icon_name: str = "stats", parent: QWidget | None = None):
         super().__init__(parent, padding=15)
+        self.setMinimumWidth(0)
         self.setMinimumHeight(108)
+        self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
         top = QHBoxLayout()
         top.setSpacing(8)
-        label = QLabel(title, self)
+        label = ElidedLabel(title, self)
         label.setObjectName("muted")
         top.addWidget(label, 1)
         badge = IconBadge(icon_name, theme.ACCENT, self, size=30)
         top.addWidget(badge)
         self.body.addLayout(top)
-        self.value = QLabel("—", self)
+        self.value = ElidedLabel("—", self)
         self.value.setObjectName("value")
-        self.value.setTextFormat(Qt.TextFormat.PlainText)
         self.body.addWidget(self.value)
-        self.caption = QLabel("", self)
+        self.caption = ElidedLabel("", self)
         self.caption.setObjectName("tiny")
-        self.caption.setTextFormat(Qt.TextFormat.PlainText)
         self.body.addWidget(self.caption)
 
     def set(self, value: str, caption: str = "") -> None:
-        self.value.setText(value)
-        self.caption.setText(caption)
+        self.value.set_full_text(value)
+        self.caption.set_full_text(caption)
 
 
 class Banner(QFrame):

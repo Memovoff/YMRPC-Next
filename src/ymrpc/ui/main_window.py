@@ -43,7 +43,7 @@ from .pages.overview import OverviewPage
 from .pages.sources import SourcesPage
 from .pages.stats import StatsPage
 from .tray import TrayIcon
-from .widgets import Banner
+from .widgets import Banner, ElidedLabel
 
 logger = logging.getLogger(__name__)
 
@@ -78,6 +78,7 @@ class MainWindow(QMainWindow):
         self._connect()
         self._load_pages()
         self._apply_initial_state()
+        self._set_dirty(False)
 
         QShortcut(QKeySequence.StandardKey.Save, self).activated.connect(self.save)
 
@@ -126,7 +127,7 @@ class MainWindow(QMainWindow):
     def _build_sidebar(self) -> QWidget:
         sidebar = QWidget(self)
         sidebar.setObjectName("sidebar")
-        sidebar.setFixedWidth(228)
+        sidebar.setFixedWidth(theme.SIDEBAR_WIDTH)
         layout = QVBoxLayout(sidebar)
         layout.setContentsMargins(16, 20, 16, 16)
         layout.setSpacing(4)
@@ -195,11 +196,6 @@ class MainWindow(QMainWindow):
         row.addWidget(discord_label)
         row.addStretch(1)
         status_layout.addLayout(row)
-        self.sidebar_presence = QLabel(t("status.ready"), status_card)
-        self.sidebar_presence.setObjectName("tiny")
-        self.sidebar_presence.setTextFormat(Qt.TextFormat.PlainText)
-        self.sidebar_presence.setWordWrap(True)
-        status_layout.addWidget(self.sidebar_presence)
         self.sidebar_account = QLabel(t("settings.not_logged"), status_card)
         self.sidebar_account.setObjectName("tiny")
         self.sidebar_account.setTextFormat(Qt.TextFormat.PlainText)
@@ -217,18 +213,16 @@ class MainWindow(QMainWindow):
     def _build_footer(self) -> QWidget:
         footer = QFrame(self)
         footer.setObjectName("footer")
-        footer.setFixedHeight(60)
+        footer.setFixedHeight(theme.FOOTER_HEIGHT)
         layout = QHBoxLayout(footer)
-        layout.setContentsMargins(34, 0, 30, 0)
+        layout.setContentsMargins(theme.PAGE_MARGIN_X, 0, theme.PAGE_MARGIN_X, 0)
         layout.setSpacing(8)
         self.footer_dot = QLabel("●", footer)
         self.footer_dot.setStyleSheet(f"color: {theme.MUTED}; font-size: 9px;")
         layout.addWidget(self.footer_dot)
-        self.footer_status = QLabel(self._status_text, footer)
+        self.footer_status = ElidedLabel(self._status_text, footer)
         self.footer_status.setObjectName("muted")
-        self.footer_status.setTextFormat(Qt.TextFormat.PlainText)
-        layout.addWidget(self.footer_status)
-        layout.addStretch(1)
+        layout.addWidget(self.footer_status, 1)
         self.dirty_label = QLabel(t("settings.unsaved"), footer)
         self.dirty_label.setStyleSheet(f"color: {theme.ORANGE}; font-size: 11px;")
         self.dirty_label.setVisible(False)
@@ -243,6 +237,7 @@ class MainWindow(QMainWindow):
         self.save_button.setObjectName("primary")
         self.save_button.setCursor(Qt.CursorShape.PointingHandCursor)
         self.save_button.setEnabled(False)
+        self.save_button.setVisible(False)
         self.save_button.clicked.connect(self.save)
         layout.addWidget(self.save_button)
         return footer
@@ -431,17 +426,15 @@ class MainWindow(QMainWindow):
 
     def _on_status(self, text: str) -> None:
         self._status_text = text
-        self.footer_status.setText(text)
-        if self._view.has_track:
-            self.sidebar_presence.setText(text)
+        self.footer_status.set_full_text(text)
 
     def _on_overlay(self, running: bool, detail: str) -> None:
         self.overlay_page.set_server(running, detail)
         self.overview.set_overlay(running, detail if running else detail)
         if running:
-            self.footer_status.setText(t("status.overlay_ready", url=detail))
+            self.footer_status.set_full_text(t("status.overlay_ready", url=detail))
         elif detail:
-            self.footer_status.setText(t("overlay.error", error=detail))
+            self.footer_status.set_full_text(t("overlay.error", error=detail))
 
     def _on_update_checked(self, info) -> None:
         self.app_page.check_finished(info)
@@ -595,14 +588,12 @@ class MainWindow(QMainWindow):
     # ------------------------------------------------------------------ settings
 
     def _mark_dirty(self) -> None:
-        self._dirty = True
-        self.save_button.setEnabled(True)
-        self.revert_button.setVisible(True)
-        self.dirty_label.setVisible(True)
+        self._set_dirty(True)
 
     def _set_dirty(self, dirty: bool) -> None:
         self._dirty = dirty
         self.save_button.setEnabled(dirty)
+        self.save_button.setVisible(dirty)
         self.revert_button.setVisible(dirty)
         self.dirty_label.setVisible(dirty)
 
@@ -620,7 +611,7 @@ class MainWindow(QMainWindow):
         errors = [error for page in self.pages if (error := page.validate())]
         if errors:
             self.toast(errors[0], error=True)
-            self.footer_status.setText(errors[0])
+            self.footer_status.set_full_text(errors[0])
             return False
         previous = self.settings
         settings = self._collect()
@@ -682,20 +673,14 @@ class MainWindow(QMainWindow):
     def _refresh_status_dot(self) -> None:
         if not self.settings.presence_enabled:
             color = theme.MUTED
-            text = t("overview.presence_off")
         elif self._view.presence_visible:
             color = theme.GREEN
-            text = t("overview.presence_on")
         elif self._view.has_track:
             color = theme.ORANGE
-            text = t("status.discord_waiting")
         else:
             color = theme.MUTED
-            text = t("status.ready")
         self.footer_dot.setStyleSheet(f"color: {color}; font-size: 9px;")
         self.sidebar_dot.setStyleSheet(f"color: {color}; font-size: 9px;")
-        if not self._view.has_track:
-            self.sidebar_presence.setText(text)
 
     # ------------------------------------------------------------------ toast
 
@@ -729,7 +714,7 @@ class MainWindow(QMainWindow):
         if not hasattr(self, "_toast") or not self._toast.isVisible():
             return
         x = max(16, (self.width() - self._toast.width()) // 2)
-        y = max(16, self.height() - 60 - self._toast.height() - 18)
+        y = max(16, self.height() - theme.FOOTER_HEIGHT - self._toast.height() - 18)
         self._toast.move(x, y)
 
     def resizeEvent(self, event) -> None:  # noqa: N802
